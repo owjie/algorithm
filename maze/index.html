@@ -38,6 +38,7 @@
         const DIRECTION = {UP: 1, DOWN: 3, LEFT: 0, RIGHT: 2};
         var interval;
         var speed = 10;
+		var blockSize = 30;
 
         function Mazes() {
             this.render = new Render();
@@ -53,7 +54,7 @@
                 if (interval !== undefined) {
                     clearInterval(interval);
                 }
-                var lineScale = 0.01;
+                var lineScale = 1 / this.render.board.blockSize;
                 self.render.path().start("red", lineScale);
                 interval = setInterval(function () {
                     if (index < self.maps.startedPoints.length - 1) {
@@ -357,7 +358,7 @@
         function Canvas(id, width, height) {
             this.id = id;
             this.width = width;
-            this.blockSize = 60;
+            this.blockSize = blockSize;
             this.height = height;
             this.board = document.getElementById(id);
             this.ctx = this.board.getContext("2d");
