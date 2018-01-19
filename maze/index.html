@@ -31,11 +31,13 @@
      * Created by owjie on 01/19/2018.
      * author:owjie
      * QQ:825455115
-     * 仅供学习交流，严禁用于商业用途
+     * 仅供学习交流
      */
     (function () {
 
         const DIRECTION = {UP: 1, DOWN: 3, LEFT: 0, RIGHT: 2};
+        var interval;
+        var speed = 10;
 
         function Mazes() {
             this.render = new Render();
@@ -46,6 +48,37 @@
             init: function () {
                 this.render.init();
                 this.maps.init(this.render);
+                var self = this;
+                var index = 0;
+                if (interval !== undefined) {
+                    clearInterval(interval);
+                }
+                var lineScale = 0.01;
+                self.render.path().start("red", lineScale);
+                interval = setInterval(function () {
+                    if (index < self.maps.startedPoints.length - 1) {
+                        var fromPoints = self.maps.startedPoints[index];
+                        var toPoints = self.maps.startedPoints[index + 1];
+                        var fromX = fromPoints[0];
+                        var fromY = fromPoints[1];
+                        var toX = toPoints[0];
+                        var toY = toPoints[1];
+                        var margin = lineScale / 2;
+                        if (fromX === toX) {
+                            fromY -= margin;
+                            toY += margin;
+                        } else if (fromY === toY) {
+                            fromX -= margin;
+                            toX += margin;
+                        }
+                        self.render.path().drawPoint(fromX, fromY, true);
+                        self.render.path().drawPoint(toX, toY, false);
+                        self.render.path().close();
+                        index++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, speed);
             }
         };
 
@@ -77,17 +110,8 @@
                     if (this.moveOrigin(x, y, w, h)) {
                         break;
                     }
+                    console.log(this.startedPoints);
                 }
-                this.render.path().start("red", 0.3);
-                this.render.path().drawPoint(this.origin[0], this.origin[1], true);
-                for (var index = 0, len = this.startedPoints.length; index < len; index++) {
-                    let points = this.startedPoints[index];
-                    let x = points[0];
-                    let y = points[1];
-                    this.render.path().drawPoint(x, y, false);
-                }
-                this.render.path().drawPoint(this.terminus[0], this.terminus[1], true);
-                this.render.path().close();
                 this.render.drawArc(this.origin[0], this.origin[1]);
                 this.render.drawArc(this.terminus[0], this.terminus[1]);
             },
@@ -115,7 +139,7 @@
                     }
                 }
 
-                if (x - 1 > 0) {
+                if (x - 1 >= 0) {
                     if (point[DIRECTION.LEFT] === 1 && this.MAP[y][x - 1][4] !== 3) {
                         this.MAP[y][x - 1][4] = 3;
                         this.startedPoints.push([x - 1, y]);
@@ -123,7 +147,7 @@
                     }
                 }
 
-                if (y - 1 > 0) {
+                if (y - 1 >= 0) {
                     if (point[DIRECTION.UP] === 1 && this.MAP[y - 1][x][4] !== 3) {
                         this.MAP[y - 1][x][4] = 3;
                         this.startedPoints.push([x, y - 1]);
@@ -263,7 +287,7 @@
                 x += 0.5;
                 y += 0.5;
                 var s = this.board.blockSize;
-                this.board.ctx.fillStyle = "blue";
+                this.board.ctx.fillStyle = "red";
                 this.board.ctx.beginPath();
                 this.board.ctx.arc(x * s, y * s, s / 3, 0, Math.PI * 2, true);
                 this.board.ctx.closePath();
@@ -334,7 +358,7 @@
         function Canvas(id, width, height) {
             this.id = id;
             this.width = width;
-            this.blockSize = 20;
+            this.blockSize = 100;
             this.height = height;
             this.board = document.getElementById(id);
             this.ctx = this.board.getContext("2d");
