@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <style type="text/css">
+        * {
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+
+        .mz_box {
+            top: 50%;
+            left: 50%;
+            width: 600px;
+            height: 600px;
+            transform: translate(-50%, -50%);
+            position: absolute;
+            border: 1px black solid;
+        }
+    </style>
+</head>
+<body>
+<div class="mz_box">
+    <canvas id="mazes" width="0" height="0" style="background: black"></canvas>
+</div>
+</body>
+<script type="text/javascript">
+    (function () {
+
+        const DIRECTION = {UP: 1, DOWN: 3, LEFT: 0, RIGHT: 2};
+
+        function Mazes() {
+            this.render = new Render();
+            this.maps = new Maps();
+        }
+
+        Mazes.prototype = {
+            init: function () {
+                this.render.init();
+                this.maps.init(this.render);
+            }
+        };
+
+        function Maps() {
+            this.MAP = [];
+            this.render = '';
+            this.origin = [];
+            this.terminus = [];
+            this.startedPoints = [];
+        }
+
+        Maps.prototype = {
+            init: function (render) {
+                this.render = render;
+                this.createMaps();
+                this.autoAddressing();
+            },
+            autoAddressing: function () {
+                var s = this.render.board.blockSize;
+                var w = Math.floor(this.render.board.width / s);
+                var h = Math.floor(this.render.board.height / s);
+                this.startedPoints = [];
+                this.startedPoints.push(this.origin);
+                while (this.startedPoints.length > 0) {
+                    let points = this.startedPoints[this.startedPoints.length - 1];
+                    let x = points[0];
+                    let y = points[1];
+                    this.MAP[y][x][4] = 3;
+                    if (this.moveOrigin(x, y, w, h)) {
+                        break;
+                    }
+                }
+                this.render.path().start("red", 0.3);
+                this.render.path().drawPoint(this.origin[0], this.origin[1], true);
+                for (var index = 0, len = this.startedPoints.length; index < len; index++) {
+                    let points = this.startedPoints[index];
+                    let x = points[0];
+                    let y = points[1];
+                    this.render.path().drawPoint(x, y, false);
+                }
+                this.render.path().drawPoint(this.terminus[0], this.terminus[1], true);
+                this.render.path().close();
+                this.render.drawArc(this.origin[0], this.origin[1]);
+                this.render.drawArc(this.terminus[0], this.terminus[1]);
+            },
+            moveOrigin: function (x, y, w, h) {
+
+                if (x === this.terminus[0] && y === this.terminus[1]) {
+                    return true;
+                }
+
+                var point = this.MAP[y][x];
+
+                if (x + 1 < w) {
+                    if (point[DIRECTION.RIGHT] === 1 && this.MAP[y][x + 1][4] !== 3) {
+                        this.MAP[y][x + 1][4] = 3;
+                        this.startedPoints.push([x + 1, y]);
+                        return false;
+                    }
+                }
+
+                if (y + 1 < h) {
+                    if (point[DIRECTION.DOWN] === 1 && this.MAP[y + 1][x][4] !== 3) {
+                        this.MAP[y + 1][x][4] = 3;
+                        this.startedPoints.push([x, y + 1]);
+                        return false;
+                    }
+                }
+
+                if (x - 1 > 0) {
+                    if (point[DIRECTION.LEFT] === 1 && this.MAP[y][x - 1][4] !== 3) {
+                        this.MAP[y][x - 1][4] = 3;
+                        this.startedPoints.push([x - 1, y]);
+                        return false;
+                    }
+                }
+
+                if (y - 1 > 0) {
+                    if (point[DIRECTION.UP] === 1 && this.MAP[y - 1][x][4] !== 3) {
+                        this.MAP[y - 1][x][4] = 3;
+                        this.startedPoints.push([x, y - 1]);
+                        return false;
+                    }
+                }
+                this.startedPoints.pop();
+                return false;
+            },
+            createMaps: function () {
+                this.refreshMaps();
+                var s = this.render.board.blockSize;
+                var w = Math.floor(this.render.board.width / s);
+                var h = Math.floor(this.render.board.height / s);
+                this.MAP[0][0][DIRECTION.LEFT] = 1;
+                this.MAP[h - 1][w - 1][DIRECTION.RIGHT] = 1;
+                this.origin = [0, 0];
+                this.terminus = [w - 1, h - 1];
+                var path = this.render.path();
+                path.start("white");
+                for (var y = 0; y < h; y++) {
+                    for (var x = 0; x < w; x++) {
+                        var map = this.MAP[y][x];
+                        if (map[DIRECTION.DOWN] === 1) {
+                            path.draw(x, y, DIRECTION.DOWN);
+                        }
+                        if (map[DIRECTION.UP] === 1) {
+                            path.draw(x, y, DIRECTION.UP);
+                        }
+                        if (map[DIRECTION.LEFT] === 1) {
+                            path.draw(x, y, DIRECTION.LEFT);
+                        }
+                        if (map[DIRECTION.RIGHT] === 1) {
+                            path.draw(x, y, DIRECTION.RIGHT);
+                        }
+                    }
+                }
+                path.close();
+            },
+            refreshMaps: function () {
+                var s = this.render.board.blockSize;
+                var w = Math.floor(this.render.board.width / s);
+                var h = Math.floor(this.render.board.height / s);
+                this.render.board.clean();
+                this.MAP = [];
+                for (var y = 0; y < h; y++) {
+                    this.MAP[y] = [];
+                    for (var x = 0; x < w; x++) {
+                        this.MAP[y][x] = [0, 0, 0, 0, 0];
+                    }
+                }
+                var startPoint = [0, 0];
+                var records = [];
+                records.push(startPoint);
+
+                while (records.length > 0) {
+                    var index = Math.floor(Math.random() * records.length);
+                    var record = records.splice(index, 1);
+                    var ox = record[0][0];
+                    var oy = record[0][1];
+                    this.MAP[oy][ox][4] = 1;
+                    var checked = [];
+                    if (ox > 0) {
+                        if (this.MAP[oy][ox - 1][4] === 1) {
+                            checked.push(DIRECTION.LEFT);
+                        } else if (this.MAP[oy][ox - 1][4] === 0) {
+                            records.push([ox - 1, oy]);
+                            this.MAP[oy][ox - 1][4] = 2;
+                        }
+                    }
+                    if (oy > 0) {
+                        if (this.MAP[oy - 1][ox][4] === 1) {
+                            checked.push(DIRECTION.UP);
+                        } else if (this.MAP[oy - 1][ox][4] === 0) {
+                            records.push([ox, oy - 1]);
+                            this.MAP[oy - 1][ox][4] = 2;
+                        }
+                    }
+                    if (ox < w - 1) {
+                        if (this.MAP[oy][ox + 1][4] === 1) {
+                            checked.push(DIRECTION.RIGHT);
+                        } else if (this.MAP[oy][ox + 1][4] === 0) {
+                            records.push([ox + 1, oy]);
+                            this.MAP[oy][ox + 1][4] = 2;
+                        }
+                    }
+                    if (oy < h - 1) {
+                        if (this.MAP[oy + 1][ox][4] === 1) {
+                            checked.push(DIRECTION.DOWN);
+                        } else if (this.MAP[oy + 1][ox][4] === 0) {
+                            records.push([ox, oy + 1]);
+                            this.MAP[oy + 1][ox][4] = 2;
+                        }
+                    }
+                    if (checked.length > 0) {
+                        var pos = checked[Math.floor(Math.random() * checked.length)];
+                        switch (pos) {
+                            case DIRECTION.UP:
+                                this.MAP[oy][ox][pos] = 1;
+                                oy = oy - 1;
+                                this.MAP[oy][ox][DIRECTION.DOWN] = 1;
+                                break;
+                            case DIRECTION.DOWN:
+                                this.MAP[oy][ox][pos] = 1;
+                                oy = oy + 1;
+                                this.MAP[oy][ox][DIRECTION.UP] = 1;
+                                break;
+                            case DIRECTION.LEFT:
+                                this.MAP[oy][ox][pos] = 1;
+                                ox = ox - 1;
+                                this.MAP[oy][ox][DIRECTION.RIGHT] = 1;
+                                break;
+                            case DIRECTION.RIGHT:
+                                this.MAP[oy][ox][pos] = 1;
+                                ox = ox + 1;
+                                this.MAP[oy][ox][DIRECTION.LEFT] = 1;
+                                break;
+                            default :
+                                break;
+                        }
+                    }
+                }
+            }
+        };
+
+        function Render() {
+            this.board = '';
+            this.margin = 0;
+        }
+
+        Render.prototype = {
+            init: function () {
+                this.board = new Canvas("mazes", 600, 600);
+                this.board.setSize();
+            },
+            drawArc: function (x, y) {
+                x += 0.5;
+                y += 0.5;
+                var s = this.board.blockSize;
+                this.board.ctx.fillStyle = "blue";
+                this.board.ctx.beginPath();
+                this.board.ctx.arc(x * s, y * s, s / 3, 0, Math.PI * 2, true);
+                this.board.ctx.closePath();
+                this.board.ctx.fill();
+            },
+            path: function () {
+                var self = this;
+                return {
+                    /**
+                     * @param color 线条颜色
+                     * @param lineScale 线条粗细 0 - 1
+                     */
+                    start: function (color, lineScale) {
+                        lineScale = lineScale || 0.618;
+                        if (lineScale > 1 || lineScale <= 0) {
+                            throw "线条比例范围区间(0, 1]。";
+                        }
+                        var s = self.board.blockSize;
+                        self.board.ctx.lineWidth = s * lineScale;
+                        self.board.ctx.strokeStyle = color;
+                        self.margin = self.board.ctx.lineWidth / 2;
+                        self.board.ctx.beginPath();
+                    },
+                    drawPoint: function (x, y, isOrigin) {
+                        x += 0.5;
+                        y += 0.5;
+                        isOrigin = isOrigin || false;
+                        var s = self.board.blockSize;
+                        if (isOrigin) {
+                            self.board.ctx.moveTo(x * s, y * s);
+                        } else {
+                            self.board.ctx.lineTo(x * s, y * s);
+                        }
+                    },
+                    draw: function (x, y, pos) {
+                        var s = self.board.blockSize;
+                        x += 0.5;
+                        y += 0.5;
+                        switch (pos) {
+                            case DIRECTION.DOWN:
+                                self.board.ctx.moveTo(x * s, y * s - self.margin);
+                                self.board.ctx.lineTo(x * s, (y + 1) * s + self.margin);
+                                break;
+                            case DIRECTION.UP:
+                                self.board.ctx.moveTo(x * s, (y - 1) * s - self.margin);
+                                self.board.ctx.lineTo(x * s, y * s + self.margin);
+                                break;
+                            case DIRECTION.LEFT:
+                                self.board.ctx.moveTo((x - 1) * s - self.margin, y * s);
+                                self.board.ctx.lineTo(x * s + self.margin, y * s);
+                                break;
+                            case DIRECTION.RIGHT:
+                                self.board.ctx.moveTo(x * s - self.margin, y * s);
+                                self.board.ctx.lineTo((x + 1) * s + self.margin, y * s);
+                                break;
+                            default:
+                                break;
+                        }
+                    },
+                    close: function () {
+                        self.board.ctx.closePath();
+                        self.board.ctx.stroke()
+                    }
+                }
+            }
+        };
+
+        function Canvas(id, width, height) {
+            this.id = id;
+            this.width = width;
+            this.blockSize = 20;
+            this.height = height;
+            this.board = document.getElementById(id);
+            this.ctx = this.board.getContext("2d");
+        }
+
+        Canvas.prototype = {
+            setSize: function (width, height) {
+                this.width = width || this.width;
+                this.height = height || this.height;
+                this.board.width = this.width;
+                this.board.height = this.height;
+            },
+            clean: function () {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+            }
+        };
+
+        return new Mazes();
+    })().init();
+</script>
+</html>
