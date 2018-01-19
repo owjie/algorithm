@@ -110,7 +110,6 @@
                     if (this.moveOrigin(x, y, w, h)) {
                         break;
                     }
-                    console.log(this.startedPoints);
                 }
                 this.render.drawArc(this.origin[0], this.origin[1]);
                 this.render.drawArc(this.terminus[0], this.terminus[1]);
@@ -358,7 +357,7 @@
         function Canvas(id, width, height) {
             this.id = id;
             this.width = width;
-            this.blockSize = 100;
+            this.blockSize = 60;
             this.height = height;
             this.board = document.getElementById(id);
             this.ctx = this.board.getContext("2d");
